@@ -1,6 +1,7 @@
 import torch
 import torchvision
 import torchvision.transforms as T
+import matplotlib.pyplot as plt
 
 import logging
 from tqdm import tqdm
@@ -89,14 +90,27 @@ class Transformer(torch.nn.Module):
 
 
 if __name__ == "__main__":
+    # TODO Change this to your dataset path
+    dataset_root = "/Volumes/External/data/torch_datasets"
+    # dataset_root = "~/torch_datasets"
+    name = "1_block"
+    # TODO change device
+    device = "mps"  # for Apple Silicon GPU (MacBooks with M* chips)
+    # device = "cuda" # for NVIDIA GPU
+    # device = "cpu" # use if you do not have a compatible GPU
+
     epochs = 10
-    device = "mps"
+    batch_size = 128
+    embed = 512
+    patch_size = 16
+    num_classes = 10
+    model = Transformer(embed, patch_size, num_classes).to(device)
+
     dataset = torchvision.datasets.CIFAR10(
-        root="/Volumes/External/data/torch_datasets",
+        root=dataset_root,
         transform=T.Compose([T.ToTensor()]),
         download=True,
     )
-    model = Transformer(512, 16, 10).to(device)
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
     lossfn = torch.nn.CrossEntropyLoss()
 
@@ -108,18 +122,24 @@ if __name__ == "__main__":
     )
 
     dataloader_train = torch.utils.data.DataLoader(
-        train_dataset, batch_size=128, shuffle=True
+        train_dataset, batch_size=batch_size, shuffle=True
     )
     dataloader_val = torch.utils.data.DataLoader(
-        val_dataset, batch_size=128, shuffle=False
+        val_dataset, batch_size=batch_size, shuffle=False
     )
+
+    # Lists to store metrics for plotting
+    train_losses = []
+    train_accuracies = []
+    val_losses = []
+    val_accuracies = []
 
     for epoch in range(epochs):
         # Training phase
         model.train()
         correct = 0
         total = 0
-        running_loss = 0.0
+        train_loss = 0.0
 
         progress_bar = tqdm(
             dataloader_train, desc=f"Epoch {epoch+1}/{epochs} - Training"
@@ -141,15 +161,18 @@ if __name__ == "__main__":
             total += y.size(0)
             correct += (predicted == y).sum().item()
 
-            # Update running loss
-            running_loss += l.item()
+            # Update training loss
+            train_loss += l.item()
 
             # Update progress bar
             accuracy = 100 * correct / total
-            avg_loss = running_loss / (batch_idx + 1)
+            avg_loss = train_loss / (batch_idx + 1)
             progress_bar.set_postfix(
                 {"Loss": f"{avg_loss:.4f}", "Accuracy": f"{accuracy:.2f}%"}
             )
+
+        train_losses.append(avg_loss)
+        train_accuracies.append(accuracy)
 
         # Validation phase
         model.eval()
@@ -186,6 +209,31 @@ if __name__ == "__main__":
                     }
                 )
 
-        logger.info(
-            f"Epoch {epoch+1}: Train Acc: {accuracy:.2f}%, Val Acc: {val_accuracy:.2f}%"
-        )
+        val_losses.append(avg_val_loss)
+        val_accuracies.append(val_accuracy)
+
+    # Plot training metrics
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # Plot loss on left y-axis
+    color = "tab:red"
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Loss", color=color)
+    ax1.plot(range(1, epochs + 1), train_losses, "r-", label="Train Loss")
+    ax1.plot(range(1, epochs + 1), val_losses, "r--", label="Val Loss")
+    ax1.tick_params(axis="y", labelcolor=color)
+    ax1.legend(loc="upper left")
+
+    # Create second y-axis for accuracy
+    ax2 = ax1.twinx()
+    color = "tab:blue"
+    ax2.set_ylabel("Accuracy (%)", color=color)
+    ax2.plot(range(1, epochs + 1), train_accuracies, "b-", label="Train Accuracy")
+    ax2.plot(range(1, epochs + 1), val_accuracies, "b--", label="Val Accuracy")
+    ax2.tick_params(axis="y", labelcolor=color)
+    ax2.legend(loc="upper right")
+
+    plt.title("Training and Validation Metrics")
+    plt.tight_layout()
+    plt.savefig(f"{name}_e-{epochs}_acc-{val_accuracies[-1]}.png")
+    plt.show()
