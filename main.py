@@ -3,6 +3,7 @@ import torchvision
 import torchvision.transforms as T
 
 import logging
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -88,29 +89,103 @@ class Transformer(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    device = "cpu"
+    epochs = 10
+    device = "mps"
     dataset = torchvision.datasets.CIFAR10(
         root="/Volumes/External/data/torch_datasets",
         transform=T.Compose([T.ToTensor()]),
         download=True,
     )
-    model = Transformer(512, 16, 10)
+    model = Transformer(512, 16, 10).to(device)
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
     lossfn = torch.nn.CrossEntropyLoss()
 
-    dataloader_train = torch.utils.data.DataLoader(dataset, batch_size=128)
-    for x, y in dataloader_train:
-        x.to(torch.float32).to(device), y.to(torch.float32).to(device)
-        optimizer.zero_grad()
-        y_hat = model(x)
-        l = lossfn(
-            y_hat.to(torch.float32),
-            y.to(torch.long),
-        )
-        l.backward()
-        optimizer.step()
-        print(l)
+    # Split dataset into train and validation
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, [train_size, val_size]
+    )
 
-    x = torch.randn(2, 3, 224, 224)
-    out = model(x)
-    print(out.shape)
+    dataloader_train = torch.utils.data.DataLoader(
+        train_dataset, batch_size=128, shuffle=True
+    )
+    dataloader_val = torch.utils.data.DataLoader(
+        val_dataset, batch_size=128, shuffle=False
+    )
+
+    for epoch in range(epochs):
+        # Training phase
+        model.train()
+        correct = 0
+        total = 0
+        running_loss = 0.0
+
+        progress_bar = tqdm(
+            dataloader_train, desc=f"Epoch {epoch+1}/{epochs} - Training"
+        )
+        for batch_idx, (x, y) in enumerate(progress_bar):
+            x = x.to(torch.float32).to(device)
+            y = y.to(device)
+            optimizer.zero_grad()
+            y_hat = model(x)
+            l = lossfn(
+                y_hat.to(torch.float32),
+                y.to(torch.long),
+            )
+            l.backward()
+            optimizer.step()
+
+            # Calculate accuracy
+            _, predicted = torch.max(y_hat.data, 1)
+            total += y.size(0)
+            correct += (predicted == y).sum().item()
+
+            # Update running loss
+            running_loss += l.item()
+
+            # Update progress bar
+            accuracy = 100 * correct / total
+            avg_loss = running_loss / (batch_idx + 1)
+            progress_bar.set_postfix(
+                {"Loss": f"{avg_loss:.4f}", "Accuracy": f"{accuracy:.2f}%"}
+            )
+
+        # Validation phase
+        model.eval()
+        val_correct = 0
+        val_total = 0
+        val_loss = 0.0
+
+        with torch.no_grad():
+            progress_bar_val = tqdm(
+                dataloader_val, desc=f"Epoch {epoch+1}/{epochs} - Validation"
+            )
+            for batch_idx, (x, y) in enumerate(progress_bar_val):
+                x = x.to(torch.float32).to(device)
+                y = y.to(device)
+                y_hat = model(x)
+                l = lossfn(
+                    y_hat.to(torch.float32),
+                    y.to(torch.long),
+                )
+
+                # Calculate accuracy
+                _, predicted = torch.max(y_hat.data, 1)
+                val_total += y.size(0)
+                val_correct += (predicted == y).sum().item()
+                val_loss += l.item()
+
+                # Update progress bar
+                val_accuracy = 100 * val_correct / val_total
+                avg_val_loss = val_loss / (batch_idx + 1)
+                progress_bar_val.set_postfix(
+                    {
+                        "Val Loss": f"{avg_val_loss:.4f}",
+                        "Val Accuracy": f"{val_accuracy:.2f}%",
+                    }
+                )
+
+        logger.info(
+            f"Epoch {epoch+1}: Train Acc: {accuracy:.2f}%, Val Acc: {val_accuracy:.2f}%"
+        )
