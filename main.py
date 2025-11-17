@@ -34,25 +34,27 @@ class TransformerBlock(torch.nn.Module):
         self.q = torch.nn.Linear(embed, embed_inner)
         self.k = torch.nn.Linear(embed, embed_inner)
         self.v = torch.nn.Linear(embed, embed_inner)
-        self.fc = torch.nn.Linear(embed_inner, embed)
-        self.lanorm1 = torch.nn.LayerNorm(embed)
-        self.lanorm2 = torch.nn.LayerNorm(embed_inner)
+        self.fc_attn = torch.nn.Linear(embed_inner, embed)
+        self.fc_block = torch.nn.Linear(embed, embed)
+        self.norm1 = torch.nn.LayerNorm(embed)
+        self.norm2 = torch.nn.LayerNorm(embed)
         self.softmax = torch.nn.Softmax()
 
     def forward(self, x):
         x_skip_1 = x.clone()
-        x = self.lanorm1(x)
+        x = self.norm1(x)
 
         # self attention
         q, k, v = self.q(x), self.k(x), self.v(x)
         qk = torch.matmul(q, k.transpose(-2, -1))
         qk = self.softmax(qk)
         qkv = torch.matmul(qk, v)
+        x = self.fc_attn(qkv)
 
-        x = self.lanorm2(qkv)
-        x = self.fc(x)
         x = x + x_skip_1
         x_skip_2 = x.clone()
+        x = self.norm2(x)
+        x = self.fc_block(x)
         x = x + x_skip_2
         return x
 
