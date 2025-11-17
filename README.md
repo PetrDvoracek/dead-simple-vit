@@ -104,7 +104,7 @@ If you're looking to **learn how transformers work in vision tasks**, this repo 
 ## 🛠 TODO
 
 * [ ] Add support for different datasets.
-* [ ] Add Multi-head attention to different branch.
+* [x] Add Multi-head attention to different branch. See changes required to turn regular self-attention into multi-head self attention [in this pull request](https://github.com/PetrDvoracek/dead-simple-vit/pull/2/files)
 
 
 ---
