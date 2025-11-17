@@ -110,29 +110,25 @@ If you're looking to **learn how transformers work in vision tasks**, this repo 
 * [x] Add Multi-head attention to different branch. See changes required to turn regular self-attention into multi-head self attention [in this pull request](https://github.com/PetrDvoracek/dead-simple-vit/pull/2/files)
 * [ ] Add a learnable class token vs. “no [CLS], just pool”:
 
-Implement both:
+    - Prepend a learned cls_token and use its output embedding.
 
-- Prepend a learned cls_token and use its output embedding.
+    - Remove cls_token and instead do global average pooling over patch tokens.
 
-- Remove cls_token and instead do global average pooling over patch tokens.
-
-- Benchmark both variants; it’s a nice, self-contained experiment.
+    - Benchmark both variants; it’s a nice, self-contained experiment.
 
 * [ ] 2D sinusoidal vs. learnable positional embeddings:
 
-Implement:
+    - Fixed 2D sine-cosine pos encodings (like original ViT).
 
-- Fixed 2D sine-cosine pos encodings (like original ViT).
+    - Learnable 1D positional embeddings over flattened patches.
 
-- Learnable 1D positional embeddings over flattened patches.
-
-- Also try “no positional embeddings” to see degradation (current).
+    - Also try “no positional embeddings” to see degradation (current).
 
 * [ ] Hybrid: convolutional stem
 
-- Replace the raw patchifying with a small conv stack (e.g., 2–3 conv+BN+ReLU layers) then patchify feature maps.
+    - Replace the raw patchifying with a small conv stack (e.g., 2–3 conv+BN+ReLU layers) then patchify feature maps.
 
-- Compare sample efficiency, esp. on small datasets (CIFAR, etc.).
+    - Compare sample efficiency, esp. on small datasets (CIFAR, etc.).
 
 
 ---
