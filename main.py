@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # device = "cpu" # use if you do not have a compatible GPU
 
     epochs = 40
-    learning_rate = 1e-3
+    learning_rate = 1e-5
     batch_size = 256
     embed = 512
     patch_size = 16
