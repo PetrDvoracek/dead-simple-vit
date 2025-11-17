@@ -69,8 +69,6 @@ class Transformer(torch.nn.Module):
         self.cls_token = torch.nn.Parameter(torch.rand(embed_dim))
         self.blocks = torch.nn.Sequential(
             TransformerBlock(embed_dim, int(embed_dim * 1.5)),
-            TransformerBlock(embed_dim, int(embed_dim * 1.5)),
-            TransformerBlock(embed_dim, int(embed_dim * 1.5)),
         )
         self.cls_layer = torch.nn.Linear(embed_dim, out_features=num_classes)
 
@@ -103,8 +101,8 @@ if __name__ == "__main__":
     epochs = 40
     learning_rate = 1e-3
     batch_size = 256
-    embed = 128
-    patch_size = 8
+    embed = 512
+    patch_size = 16
     num_classes = 10
 
     model = Transformer(embed, patch_size, num_classes).to(device)
