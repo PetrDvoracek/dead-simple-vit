@@ -8,6 +8,7 @@ This repository contains a **minimal yet functional Vision Transformer (ViT)** i
 
 - ✅ **Pure PyTorch** implementation — no external dependencies beyond standard libraries.
 - ✨ **Core Transformer in <80 lines** — the self-attention and MLP block are as simple as they get.
+-    **Transformer Improvements** - such as Multi-head Attention easily comparable to the core transformer via [pull requests](https://github.com/PetrDvoracek/dead-simple-vit/pull/2/files).
 - 🧩 Includes patch embedding via convolution for easy spatial tokenization.
 - 🎯 Trains on CIFAR-10 with validation and training loop included.
 - 📊 Automatically plots and saves training/validation accuracy and loss.
