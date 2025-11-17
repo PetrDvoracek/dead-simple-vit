@@ -33,3 +33,89 @@ The transformer implementation itself (excluding training and plotting) is locat
 EmbeddingLayer   → 10 lines  
 TransformerBlock → 26 lines  
 Transformer      → 22 lines  
+
+Each class is **clearly structured and documented** to highlight the essential components of the Vision Transformer.
+
+---
+
+## 🏁 Quick Start
+
+### 1. Clone this repository
+
+```bash
+git clone https://github.com/your-username/tiny-vit.git
+cd tiny-vit
+```
+
+### 2. Adjust Configurations
+
+Open the script and modify the following variables if needed:
+
+```python
+dataset_root = "/path/to/torch_datasets"
+device = "cuda"  # or "mps" / "cpu"
+```
+
+### 3. Run the Training Script
+
+```bash
+python vit.py
+```
+
+The script will:
+
+* Train the model on CIFAR-10.
+* Display progress with `tqdm`.
+* Save a plot of loss and accuracy per epoch.
+
+---
+
+## 📈 Output Example
+
+At the end of training, a performance graph will be saved:
+
+```
+1_block_e-40_acc-XX.XX.png
+```
+
+It includes:
+
+* Training vs. validation loss
+* Training vs. validation accuracy
+
+---
+
+## 🔍 Files Overview
+
+| File            | Description                               |
+| --------------- | ----------------------------------------- |
+| `vit.py`        | Full model and training loop              |
+| `README.md`     | You're reading it                         |
+| *(Coming soon)* | Notebook version for easy experimentation |
+
+---
+
+## 📚 Educational Value
+
+If you're looking to **learn how transformers work in vision tasks**, this repo is a great starting point. All complexity has been stripped away to **highlight the core ideas** without distraction.
+
+---
+
+## 🛠 TODO
+
+* [ ] Add support for different datasets.
+* [ ] Add Multi-head attention to different branch.
+
+
+---
+
+## 🧾 License
+
+This project is open-source and available under the [MIT License](LICENSE).
+
+---
+
+## 🙌 Acknowledgements
+
+Inspired by the original [ViT paper](https://arxiv.org/abs/2010.11929) and simplified implementations across the PyTorch community.
+
