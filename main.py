@@ -99,28 +99,29 @@ if __name__ == "__main__":
     # device = "cuda" # for NVIDIA GPU
     # device = "cpu" # use if you do not have a compatible GPU
 
-    epochs = 10
-    batch_size = 128
+    epochs = 40
+    learning_rate = 1e-5
+    batch_size = 256
     embed = 512
     patch_size = 16
     num_classes = 10
-    model = Transformer(embed, patch_size, num_classes).to(device)
 
-    dataset = torchvision.datasets.CIFAR10(
+    model = Transformer(embed, patch_size, num_classes).to(device)
+    optimizer = torch.optim.AdamW(params=model.parameters(), lr=learning_rate)
+    lossfn = torch.nn.CrossEntropyLoss()
+
+    train_dataset = torchvision.datasets.CIFAR10(
         root=dataset_root,
         transform=T.Compose([T.ToTensor()]),
         download=True,
+        train=True,
     )
-    optimizer = torch.optim.AdamW(params=model.parameters(), lr=1e-5)
-    lossfn = torch.nn.CrossEntropyLoss()
-
-    # Split dataset into train and validation
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        dataset, [train_size, val_size]
+    val_dataset = torchvision.datasets.CIFAR10(
+        root=dataset_root,
+        transform=T.Compose([T.ToTensor()]),
+        download=True,
+        train=False,
     )
-
     dataloader_train = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True
     )
