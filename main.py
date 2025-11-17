@@ -113,9 +113,6 @@ if __name__ == "__main__":
         root=dataset_root,
         transform=T.Compose(
             [
-                T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
-                T.RandomPerspective(distortion_scale=0.5, p=0.5),
-                T.RandomHorizontalFlip(p=0.5),
                 T.ToTensor(),
             ]
         ),
