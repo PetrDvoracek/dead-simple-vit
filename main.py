@@ -2,19 +2,16 @@ import torch
 import torchvision
 import torchvision.transforms as T
 import matplotlib.pyplot as plt
+import timm
 
-import logging
 from tqdm import tqdm
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class EmbeddingLayer(torch.nn.Module):
     def __init__(self, embed_dim, patch_size):
         super(EmbeddingLayer, self).__init__()
         # Patchification is done using convolution with
-        # big kernel_size and stride.
+        # large `kernel_size` and `stride` both equal to patch size.
         self.conv = torch.nn.Conv2d(
             in_channels=3,
             out_channels=embed_dim,
@@ -24,8 +21,12 @@ class EmbeddingLayer(torch.nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        # merge `height` and `width` dimensions into one `tokens` dimension
-        # batch x tokens x features
+        # Merge `height` and `width` dimensions into one `tokens` dimension
+        # from: batch x height x width x features
+        # to: batch x tokens x features.
+        # This operation is fully reversible with
+        # `x = x.reshape(x.shape[0], torch.sqrt(x.shape[1]), torch.sqrt(x.shape[1]), x.shape[2])` or
+        # `x = x.reshape(x.shape[0], height, width, x.shape[2])` if height and width are known.
         x = x.reshape(x.shape[0], -1, x.shape[1])
         return x
 
@@ -93,17 +94,17 @@ if __name__ == "__main__":
     # TODO Change this to your dataset path
     dataset_root = "/Volumes/External/data/torch_datasets"
     # dataset_root = "~/torch_datasets"
-    name = "1_block"
+    name = "1_block_small"
     # TODO change device
     device = "mps"  # for Apple Silicon GPU (MacBooks with M* chips)
     # device = "cuda" # for NVIDIA GPU
     # device = "cpu" # use if you do not have a compatible GPU
 
     epochs = 40
-    learning_rate = 1e-5
+    learning_rate = 1e-3
     batch_size = 256
-    embed = 512
-    patch_size = 16
+    embed = 128
+    patch_size = 8
     num_classes = 10
 
     model = Transformer(embed, patch_size, num_classes).to(device)
@@ -112,7 +113,14 @@ if __name__ == "__main__":
 
     train_dataset = torchvision.datasets.CIFAR10(
         root=dataset_root,
-        transform=T.Compose([T.ToTensor()]),
+        transform=T.Compose(
+            [
+                T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+                T.RandomPerspective(distortion_scale=0.5, p=0.5),
+                T.RandomHorizontalFlip(p=0.5),
+                T.ToTensor(),
+            ]
+        ),
         download=True,
         train=True,
     )
@@ -229,6 +237,7 @@ if __name__ == "__main__":
     ax2 = ax1.twinx()
     color = "tab:blue"
     ax2.set_ylabel("Accuracy (%)", color=color)
+    ax2.set_ylim(0, 100)
     ax2.plot(range(1, epochs + 1), train_accuracies, "b-", label="Train Accuracy")
     ax2.plot(range(1, epochs + 1), val_accuracies, "b--", label="Val Accuracy")
     ax2.tick_params(axis="y", labelcolor=color)
