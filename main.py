@@ -32,19 +32,25 @@ class EmbeddingLayer(torch.nn.Module):
 
 
 class TransformerBlock(torch.nn.Module):
-    def __init__(self, embed, embed_inner):
+    def __init__(self, embed, embed_inner, num_heads):
         super().__init__()
-        self.q = torch.nn.Linear(embed, embed_inner)
-        self.k = torch.nn.Linear(embed, embed_inner)
-        self.v = torch.nn.Linear(embed, embed_inner)
-        self.fc_attn = torch.nn.Linear(embed_inner, embed)
+        self.num_heads = num_heads
+        self.q = torch.nn.Linear(embed // num_heads, embed_inner // num_heads)
+        self.k = torch.nn.Linear(embed // num_heads, embed_inner // num_heads)
+        self.v = torch.nn.Linear(embed // num_heads, embed_inner // num_heads)
+        self.fc_attn = torch.nn.Linear(embed_inner // num_heads, embed // num_heads)
         self.fc_block = torch.nn.Linear(embed, embed)
-        self.norm1 = torch.nn.LayerNorm(embed)
+        self.norm1 = torch.nn.LayerNorm(embed // num_heads)
         self.norm2 = torch.nn.LayerNorm(embed)
         self.softmax = torch.nn.Softmax()
 
     def forward(self, x):
+        # Each part of feature embedding is splitted to different heads
+        # from: batch x tokens x features
+        # to:   batch x tokens x heads x features_per_head.
+        # Every head sees all tokens, but only a part of the features.
         x_skip_1 = x.clone()
+        x = x.reshape(x.shape[0], x.shape[1], self.num_heads, x.shape[2] // self.num_heads)
         x = self.norm1(x)
 
         # self attention
@@ -53,6 +59,7 @@ class TransformerBlock(torch.nn.Module):
         qk = self.softmax(qk)
         qkv = torch.matmul(qk, v)
         x = self.fc_attn(qkv)
+        x = x.reshape(x.shape[0], x.shape[1], -1)
 
         x = x + x_skip_1
         x_skip_2 = x.clone()
@@ -63,12 +70,12 @@ class TransformerBlock(torch.nn.Module):
 
 
 class Transformer(torch.nn.Module):
-    def __init__(self, embed_dim, patch_size, num_classes):
+    def __init__(self, embed_dim, patch_size, num_heads, num_classes):
         super(Transformer, self).__init__()
         self.embedding = EmbeddingLayer(embed_dim, patch_size)
         self.cls_token = torch.nn.Parameter(torch.rand(embed_dim))
         self.blocks = torch.nn.Sequential(
-            TransformerBlock(embed_dim, int(embed_dim * 1.5)),
+            TransformerBlock(embed_dim, int(embed_dim * 1.5), num_heads),
         )
         self.cls_layer = torch.nn.Linear(embed_dim, out_features=num_classes)
 
@@ -104,8 +111,9 @@ if __name__ == "__main__":
     embed = 512
     patch_size = 16
     num_classes = 10
+    num_heads = 8
 
-    model = Transformer(embed, patch_size, num_classes).to(device)
+    model = Transformer(embed, patch_size, num_heads, num_classes).to(device)
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=learning_rate)
     lossfn = torch.nn.CrossEntropyLoss()
 
