@@ -91,29 +91,29 @@ class Transformer(torch.nn.Module):
 if __name__ == "__main__":
     # TODO Change this to your dataset path
     dataset_root = "/Volumes/External/data/torch_datasets"
-    # dataset_root = "~/torch_datasets"
-    name = "1_block_small"
+    name = "1_block_optimized"
     # TODO change device
-    device = "mps"  # for Apple Silicon GPU (MacBooks with M* chips)
-    # device = "cuda" # for NVIDIA GPU
-    # device = "cpu" # use if you do not have a compatible GPU
+    device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
-    epochs = 40
-    learning_rate = 1e-5
-    batch_size = 256
+    epochs = 100  # Increased epochs for better convergence
+    learning_rate = 1e-5  # Slightly higher learning rate for faster training
+    batch_size = 128  # Reduced batch size to fit into GPU memory
     embed = 512
     patch_size = 16
     num_classes = 10
 
     model = Transformer(embed, patch_size, num_classes).to(device)
-    optimizer = torch.optim.AdamW(params=model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.AdamW(params=model.parameters(), lr=learning_rate, weight_decay=0.05)  # Added weight decay
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)  # Added learning rate scheduler
     lossfn = torch.nn.CrossEntropyLoss()
 
     train_dataset = torchvision.datasets.CIFAR10(
         root=dataset_root,
         transform=T.Compose(
             [
+                T.RandomHorizontalFlip(),  # Data augmentation: horizontal flip
                 T.ToTensor(),
+                T.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),  # Normalize with CIFAR-10 stats
             ]
         ),
         download=True,
@@ -121,15 +121,20 @@ if __name__ == "__main__":
     )
     val_dataset = torchvision.datasets.CIFAR10(
         root=dataset_root,
-        transform=T.Compose([T.ToTensor()]),
+        transform=T.Compose(
+            [
+                T.ToTensor(),
+                T.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),  # Normalize with CIFAR-10 stats
+            ]
+        ),
         download=True,
         train=False,
     )
     dataloader_train = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, persistent_workers=True
     )
     dataloader_val = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, persistent_workers=True
     )
 
     # Lists to store metrics for plotting
@@ -216,6 +221,9 @@ if __name__ == "__main__":
         val_losses.append(avg_val_loss)
         val_accuracies.append(val_accuracy)
 
+        # Step the scheduler
+        scheduler.step()
+
     # Plot training metrics
     fig, ax1 = plt.subplots(figsize=(10, 6))
 
@@ -240,5 +248,5 @@ if __name__ == "__main__":
 
     plt.title("Training and Validation Metrics")
     plt.tight_layout()
-    plt.savefig(f"{name}_e-{epochs}_acc-{val_accuracies[-1]}.png")
+    plt.savefig(f"{name}_e-{epochs}_acc-{val_accuracies[-1]:.2f}.png")
     plt.show()
