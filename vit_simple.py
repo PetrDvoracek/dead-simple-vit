@@ -8,11 +8,9 @@ class PatchEmbedding(nn.Module):
     def __init__(self, patch_size, embed_dim):
         super().__init__()
         self.proj = nn.Conv2d(3, embed_dim, kernel_size=patch_size, stride=patch_size)
-        print(self.proj)
 
     def forward(self, x):
         # x: (batch, 3, H, W) -> (batch, embed_dim, H/P, W/P)
-        print(x.shape)
         x = self.proj(x)
 
         # Flatten spatial dims: (batch, embed_dim, N) -> (batch, N, embed_dim)
