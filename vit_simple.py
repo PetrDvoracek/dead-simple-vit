@@ -19,7 +19,7 @@ class PatchEmbedding(nn.Module):
 
 
 class Attention(nn.Module):
-    """Multi-head self-attention (simplified to single head)."""
+    """Single-head self-attention."""
 
     def __init__(self, dim):
         super().__init__()
